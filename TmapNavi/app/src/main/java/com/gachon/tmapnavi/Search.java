@@ -41,7 +41,7 @@ public class Search extends AppCompatActivity {
     TextView textView;
     private TMapView tMapView;
     private TMapData tMapData;
-    private String apiKey = "IcKTqBDL9J5Gsc2VIc3Fx8gql8LFDWgi4dWC7iUi";
+    private String apiKey = "YOUR_API_KEY";
     private OkHttpClient httpClient;
     private Handler handler = new Handler();
     private Runnable runnable;
