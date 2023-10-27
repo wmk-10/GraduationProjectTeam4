@@ -2,22 +2,18 @@ package com.gachon.tmapnavi;
 
 import static com.gachon.tmapnavi.MainActivity.LOCATION_PERMISSION_REQUEST_CODE;
 
-import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-
 import android.Manifest;
+import android.app.Activity;
 import android.content.Context;
-import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
-import android.os.Handler;
 import android.util.Log;
-import android.widget.FrameLayout;
-import android.widget.TextView;
+
+import androidx.annotation.NonNull;
+import androidx.core.app.ActivityCompat;
 
 import com.skt.Tmap.TMapData;
 import com.skt.Tmap.TMapPoint;
@@ -37,65 +33,7 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 
-public class Search extends AppCompatActivity {
-    TextView textView;
-    private TMapView tMapView;
-    private TMapData tMapData;
-    private String apiKey = "IcKTqBDL9J5Gsc2VIc3Fx8gql8LFDWgi4dWC7iUi";
-    private OkHttpClient httpClient;
-    private Handler handler = new Handler();
-    private Runnable runnable;
-
-    // 갱신 주기 (밀리초 단위, 예: 5000 = 5초)
-    private static final int UPDATE_INTERVAL = 3000;
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_search);
-
-
-        // Initialize OkHttpClient
-        httpClient = new OkHttpClient();
-
-//        textView = findViewById(R.id.search_id);
-        initializeTMapView(); // Initialize TMapView
-
-        // Add TMapView to the container
-        FrameLayout mapContainer = findViewById(R.id.mapContainer);
-        mapContainer.addView(tMapView);
-
-        /*
-        Intent intent = getIntent();
-        String place = intent.getStringExtra("search_place");
-
-        textView.setText(place);
-        System.out.println("넘어온 값: " + place );
-        */
-
-        Intent intent = getIntent();
-        String[] received_places = intent.getStringArrayExtra("search_places");
-
-        if (received_places != null) {
-            //문자열 클래스
-            StringBuilder placesText = new StringBuilder();
-
-            // received_places 배열의 각 요소를 하나씩 가져와서 place 변수에 할당하는 반복문
-            // place에는 배열에 있는 각 장소 정보가 순서대로 저장됨
-            for (String place : received_places) {
-                placesText.append(place).append(" ");
-            }
-
-            String destination = placesText.toString();
-            // placeText라는 StringBuilder 객체의 내용을 문자열로 반환 필요
-//            textView.setText(destination);
-            //System.out.println("넘어온 값: " + placesText.toString());
-
-        } else {
-            textView.setText("전달받은 장소 정보가 없습니다.");
-        }
-    }
-
+public class TMapUtil extends Activity {
     private void fetchPathData(double startLat, double startLon, double endLat, double endLon) {
         RequestBody formBody = new FormBody.Builder()
                 .add("startX", String.valueOf(startLon))
@@ -155,11 +93,18 @@ public class Search extends AppCompatActivity {
         }
     }
 
-    private void initializeTMapView() {
+    private TMapView tMapView;
+    private TMapData tMapData;
+    private String apiKey;
+    private OkHttpClient httpClient;
 
-//        public void initializeTMap (MainActivity mainActivity){
+    public TMapUtil(String apiKey) {
+        this.apiKey = apiKey;
+    }
+
+    public void initializeTMap(MainActivity mainActivity) {
         // TmapView 생성 및 초기화
-        tMapView = new TMapView(this); // Use 'this' instead of 'mainActivity'
+        tMapView = new TMapView(mainActivity);
         tMapView.setSKTMapApiKey(apiKey);
         tMapData = new TMapData();
         Log.i("TMap", "초기화 성공");
@@ -186,12 +131,15 @@ public class Search extends AppCompatActivity {
         tMapView.setMapType(TMapView.MAPTYPE_STANDARD);
     }
 
+    public TMapView getTMapView() {
+        return tMapView;
+    }
 
     private void searchPath() {
         // 위치 권한 요청 처리 필요
         System.out.println("Call permission");
         ActivityCompat.requestPermissions(this,
-                new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION, android.Manifest.permission.ACCESS_COARSE_LOCATION},
+                new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION},
                 LOCATION_PERMISSION_REQUEST_CODE);
     }
 
@@ -217,7 +165,7 @@ public class Search extends AppCompatActivity {
 
     private void getCurrentLocation() {
         LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
                 && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             Location lastKnownLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
             System.out.println("lastKnownLocation = " + lastKnownLocation);

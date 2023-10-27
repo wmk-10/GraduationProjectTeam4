@@ -1,4 +1,5 @@
 package com.gachon.tmapnavi;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
@@ -24,6 +25,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 
@@ -31,7 +33,6 @@ public class Navigation extends AppCompatActivity {
     Intent intent;
     SpeechRecognizer mRecognizer;
     Button sttBtn;
-    Button ttsBtn;
     TextView textView;
 
     public TextToSpeech tts;
@@ -50,7 +51,6 @@ public class Navigation extends AppCompatActivity {
 
         textView = findViewById(R.id.sttResult);
         sttBtn = findViewById(R.id.sttStart);
-        ttsBtn = findViewById(R.id.ttsStart);
 
         //STT를 위한 음성인식 - Recognizer Intent 객체 생성
         intent=new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
@@ -78,15 +78,6 @@ public class Navigation extends AppCompatActivity {
                 }
             }
         });
-
-        //TTS 문장 입력
-        ttsBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                tts.speak("으로 안내를 시작할까요?", TextToSpeech.QUEUE_FLUSH, null);
-            }
-        });
-
     }
 
     //음성인식 콜백 메세지 정리
@@ -179,11 +170,11 @@ public class Navigation extends AppCompatActivity {
             }
 
             List<String> places = analyzeResultList.getMorphesByTags("NNG","NNP","NNB","NP","SN");
-
+//            places = Collections.singletonList("가천대");
             if(!places.isEmpty()) {
-                System.out.println("검색할 장소: " + places);
-
                 String[] search_places = places.toArray(new String[0]);
+
+                System.out.println("검색할 장소: " + places);
 
                 //길 안내 전 확인 멘트
                 tts.speak(places + "으로 안내를 시작할까요?", TextToSpeech.QUEUE_FLUSH, null);
@@ -194,27 +185,34 @@ public class Navigation extends AppCompatActivity {
                 //음성인식 결과 string으로 변환 후 저장
                 ArrayList<String> answer =
                         results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
-                //list의 글자 textView로 출력
-                for(int i = 0; i < matches.size() ; i++){
-                    textView.setText(matches.get(i));
-                }
-                String anw = answer.toString();
+//                //list의 글자 textView로 출력
+//                for(int i = 0; i < matches.size() ; i++){
+//                    textView.setText(matches.get(i));
+//                }
+//                String anw = answer.toString();
 
-                //사용자 답변 확인
-                if ( anw.contains("예") || anw.contains("네") || anw.contains("응") || anw.contains("그래") == true) {
-                    // SearchActivity로 search_places 데이터(검색할 장소명) 넘기기
-                    Intent new_intent = new Intent(Navigation.this,Search.class);
-                    new_intent.putExtra("search_places",search_places);
-                    startActivity(new_intent);
+                tts.speak("안내를 시작합니다", TextToSpeech.QUEUE_FLUSH, null);
 
-                    tts.speak("안내를 시작합니다", TextToSpeech.QUEUE_FLUSH, null);
+                // 결과 설정 및 Activity 종료
+                Intent new_intent = new Intent(Navigation.this, Search.class);
+                new_intent.putExtra("search_places", search_places);
+                startActivity(new_intent);
+                //setResult(RESULT_OK, new_intent);
+                finish();
 
-                    // 결과 설정 및 Activity 종료
-                    setResult(RESULT_OK); // 이를 사용하여 MainActivity에서 결과 확인
-                    finish();
-                } else {
-                    tts.speak("안내 시작을 종료합니다", TextToSpeech.QUEUE_FLUSH, null);
-                }
+//                //사용자 답변 확인
+//                if (anw.contains("예") || anw.contains("네") || anw.contains("응") || anw.contains("그래") == true) {
+//
+//                    tts.speak("안내를 시작합니다", TextToSpeech.QUEUE_FLUSH, null);
+//
+//                    // 결과 설정 및 Activity 종료
+//                    Intent new_intent = new Intent(Navigation.this, MainActivity.class);
+//                    new_intent.putExtra("search_places", search_places);
+//                    setResult(RESULT_OK, new_intent);
+//                    finish();
+//                } else {
+//                    tts.speak("안내 시작을 종료합니다", TextToSpeech.QUEUE_FLUSH, null);
+//                }
 
             }
             else {
@@ -228,4 +226,5 @@ public class Navigation extends AppCompatActivity {
         @Override
         public void onEvent(int eventType, Bundle params) {}
     };
+
 }
