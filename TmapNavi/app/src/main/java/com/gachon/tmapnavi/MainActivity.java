@@ -59,7 +59,11 @@ public class MainActivity extends AppCompatActivity implements GestureDetector.O
     private int resultCode;
     @Nullable
     private Intent data;
-
+        //실시간 위치 파란점
+        tMapView.setTrackingMode(true);
+        tMapView.setIconVisibility(true);
+        tMapView.setSightVisible(true);
+        
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
