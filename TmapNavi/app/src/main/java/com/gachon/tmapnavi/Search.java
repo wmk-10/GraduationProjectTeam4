@@ -163,7 +163,10 @@ public class Search extends AppCompatActivity {
         tMapView.setSKTMapApiKey(apiKey);
         tMapData = new TMapData();
         Log.i("TMap", "초기화 성공");
-
+        //현재위치 (파란점)
+        tMapView.setTrackingMode(true);
+        tMapView.setIconVisibility(true);
+        tMapView.setSightVisible(true);
         // API 키 인증 완료 콜백 등록
         tMapView.setOnApiKeyListener(new TMapView.OnApiKeyListenerCallback() {
             @Override
