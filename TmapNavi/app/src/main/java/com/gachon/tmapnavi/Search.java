@@ -35,6 +35,7 @@ import java.util.Locale;
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.FormBody;
+import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
@@ -46,10 +47,10 @@ public class Search extends AppCompatActivity {
     public TextToSpeech tts;
     private TMapView tMapView;
     private TMapData tMapData;
-    private String apiKey = "YOUR_API_KEY";
+    private String apiKey = "qb6k37D0lnGz1icuSeNMa0nKtOd8ztJ6uo9RNYT3";
     private OkHttpClient httpClient;
     private Handler handler = new Handler();
-    private Runnable runnable;
+    private Runnable locationUpdateRunnable;
 
     // 갱신 주기 (밀리초 단위, 예: 5000 = 5초)
     private static final int UPDATE_INTERVAL = 3000;
@@ -89,6 +90,7 @@ public class Search extends AppCompatActivity {
             // place에는 배열에 있는 각 장소 정보가 순서대로 저장됨
             for (String place : received_places) {
                 placesText.append(place).append(" ");
+//                geocodeAddress(place); // 각 주소에 대해 지오코딩 요청
             }
 
             String destination = placesText.toString();
@@ -100,6 +102,7 @@ public class Search extends AppCompatActivity {
             textView.setText("전달받은 장소 정보가 없습니다.");
         }
 
+<<<<<<< Updated upstream
         //TTS 사용
         tts = new TextToSpeech(this, new TextToSpeech.OnInitListener() {
             @Override
@@ -109,10 +112,72 @@ public class Search extends AppCompatActivity {
 
                     if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
                         Toast.makeText(Search.this, "지원하지 않는 언어입니다", Toast.LENGTH_SHORT).show();
+=======
+        // Runnable을 초기화하고 시작
+//        initializeLocationUpdateRunnable();
+//        handler.postDelayed(locationUpdateRunnable, UPDATE_INTERVAL);
+
+    }
+
+    private void geocodeAddress(String address) {
+        HttpUrl.Builder urlBuilder = HttpUrl.parse("https://apis.openapi.sk.com/tmap/geo/fullAddrGeo").newBuilder();
+        urlBuilder.addQueryParameter("version", "1");
+        urlBuilder.addQueryParameter("format", "json");
+        urlBuilder.addQueryParameter("coordType", "WGS84GEO");
+        urlBuilder.addQueryParameter("fullAddr", address);
+
+        String url = urlBuilder.build().toString();
+
+        Request request = new Request.Builder()
+                .url(url)
+                .get()
+                .addHeader("appKey", this.apiKey)
+                .addHeader("Content-Type", "application/json")
+                .build();
+
+        httpClient.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(Call call, IOException e) {
+                e.printStackTrace();
+            }
+
+            @Override
+            public void onResponse(Call call, Response response) throws IOException {
+                if (response.isSuccessful()) {
+                    String myResponse = response.body().string();
+                    try {
+                        JSONObject jsonResponse = new JSONObject(myResponse);
+                        // 이곳에서 JSON 데이터를 처리
+                        // 예: 위도와 경도 좌표 추출
+                        System.out.println("GEOCODING");
+                        System.out.println("jsonResponse = " + jsonResponse);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+>>>>>>> Stashed changes
                     }
                 }
             }
         });
+<<<<<<< Updated upstream
+=======
+    }
+
+    // Runnable을 초기화하는 메서드
+    private void initializeLocationUpdateRunnable() {
+        locationUpdateRunnable = new Runnable() {
+            @Override
+            public void run() {
+                initializeTMapView(); // 현재 위치 가져오기
+                handler.postDelayed(this, UPDATE_INTERVAL); // 다음 업데이트를 예약
+            }
+        };
+    }
+
+    protected void onDestroy() {
+        super.onDestroy();
+        // Handler에서 Runnable을 제거하여 메모리 누수 방지
+        handler.removeCallbacks(locationUpdateRunnable);
+>>>>>>> Stashed changes
     }
 
     private void fetchPathData(double startLat, double startLon, double endLat, double endLon) {
@@ -149,6 +214,8 @@ public class Search extends AppCompatActivity {
                     String myResponse = response.body().string();
                     try {
                         JSONObject jsonPathData = new JSONObject(myResponse);
+                        System.out.println("\n");
+                        System.out.println("NAVIGATION");
                         // 이곳에서 JSON 데이터를 처리
                         System.out.println("Received path data: " + jsonPathData.toString());
 
@@ -206,6 +273,11 @@ public class Search extends AppCompatActivity {
         tMapView.setCenterPoint(127.1346, 37.4562);
         tMapView.setZoomLevel(15);
         tMapView.setMapType(TMapView.MAPTYPE_STANDARD);
+
+        //실시간 위치 파란점
+//        tMapView.setTrackingMode(true);
+//        tMapView.setIconVisibility(true);
+//        tMapView.setSightVisible(true);
     }
 
 
@@ -248,9 +320,10 @@ public class Search extends AppCompatActivity {
                 double currentLatitude = lastKnownLocation.getLatitude();
                 double currentLongitude = lastKnownLocation.getLongitude();
 
+                String address = new String("가천대");
+                geocodeAddress(address);
                 // 경로 데이터 가져오기
                 fetchPathData(currentLatitude, currentLongitude, 37.4562, 127.1346);
-
                 // 경로 검색 예제
                 TMapPoint startPoint = new TMapPoint(currentLatitude, currentLongitude); // 현재 위치를 출발지로 사용
                 TMapPoint endPoint = new TMapPoint(37.4562, 127.1346);   // 도착지 좌표
