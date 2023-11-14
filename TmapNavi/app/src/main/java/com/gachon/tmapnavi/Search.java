@@ -15,9 +15,11 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.os.Handler;
+import android.speech.tts.TextToSpeech;
 import android.util.Log;
 import android.widget.FrameLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.skt.Tmap.TMapData;
 import com.skt.Tmap.TMapPoint;
@@ -28,6 +30,7 @@ import org.json.JSONObject;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.Locale;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -39,6 +42,8 @@ import okhttp3.Response;
 
 public class Search extends AppCompatActivity {
     TextView textView;
+
+    public TextToSpeech tts;
     private TMapView tMapView;
     private TMapData tMapData;
     private String apiKey = "YOUR_API_KEY";
@@ -94,6 +99,20 @@ public class Search extends AppCompatActivity {
         } else {
             textView.setText("전달받은 장소 정보가 없습니다.");
         }
+
+        //TTS 사용
+        tts = new TextToSpeech(this, new TextToSpeech.OnInitListener() {
+            @Override
+            public void onInit(int status) {
+                if (status == TextToSpeech.SUCCESS) {
+                    int result = tts.setLanguage(Locale.KOREAN);
+
+                    if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+                        Toast.makeText(Search.this, "지원하지 않는 언어입니다", Toast.LENGTH_SHORT).show();
+                    }
+                }
+            }
+        });
     }
 
     private void fetchPathData(double startLat, double startLon, double endLat, double endLon) {
@@ -284,5 +303,11 @@ public class Search extends AppCompatActivity {
         } else {
             Log.e("Location", "Location permission not granted");
         }
+
+
+        //경로 받아와서 tts 출력하기 ("" 자리에 문자열 넣어주시면 됩니다!)
+        tts.speak("", TextToSpeech.QUEUE_FLUSH, null);
     }
+
+
 }
