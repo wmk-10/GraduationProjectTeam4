@@ -26,12 +26,22 @@ import com.skt.Tmap.TMapPoint;
 import com.skt.Tmap.TMapPolyLine;
 import com.skt.Tmap.TMapView;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Locale;
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
 
+
+import kr.co.shineware.nlp.komoran.constant.DEFAULT_MODEL;
+import kr.co.shineware.nlp.komoran.core.Komoran;
+import kr.co.shineware.nlp.komoran.model.KomoranResult;
+import kr.co.shineware.nlp.komoran.model.Token;
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.FormBody;
@@ -41,19 +51,24 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 
+import com.skt.Tmap.TMapGpsManager;
+
 public class Search extends AppCompatActivity {
     TextView textView;
 
     public TextToSpeech tts;
     private TMapView tMapView;
     private TMapData tMapData;
-    private String apiKey = "qb6k37D0lnGz1icuSeNMa0nKtOd8ztJ6uo9RNYT3";
+    private String apiKey = "19WcpRBG1E1ttKsnYGMW92XiXrKkD8e6jx0otXhe";
     private OkHttpClient httpClient;
     private Handler handler = new Handler();
     private Runnable locationUpdateRunnable;
+    TMapPoint endPoint_g;
+//    TMapPoint endPoint;
 
     // 갱신 주기 (밀리초 단위, 예: 5000 = 5초)
-    private static final int UPDATE_INTERVAL = 3000;
+    private static final int UPDATE_INTERVAL = 10000;
+//    private TMapGpsManager tMapGPSManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -66,7 +81,8 @@ public class Search extends AppCompatActivity {
 
 //        textView = findViewById(R.id.search_id);
         initializeTMapView(); // Initialize TMapView
-
+//        initializeLocationUpdateRunnable();
+//        initializeTMapGPSManager();
         // Add TMapView to the container
         FrameLayout mapContainer = findViewById(R.id.mapContainer);
         mapContainer.addView(tMapView);
@@ -102,7 +118,6 @@ public class Search extends AppCompatActivity {
             textView.setText("전달받은 장소 정보가 없습니다.");
         }
 
-<<<<<<< Updated upstream
         //TTS 사용
         tts = new TextToSpeech(this, new TextToSpeech.OnInitListener() {
             @Override
@@ -112,14 +127,22 @@ public class Search extends AppCompatActivity {
 
                     if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
                         Toast.makeText(Search.this, "지원하지 않는 언어입니다", Toast.LENGTH_SHORT).show();
-=======
-        // Runnable을 초기화하고 시작
+                        // Runnable을 초기화하고 시작
 //        initializeLocationUpdateRunnable();
 //        handler.postDelayed(locationUpdateRunnable, UPDATE_INTERVAL);
 
+                    }
+                }
+            }
+        });
     }
 
-    private void geocodeAddress(String address) {
+    interface GeocodeCallback {
+        void onGeocodeSuccess(TMapPoint point);
+        void onGeocodeFailure(Exception e);
+    }
+
+    private void geocodeAddress(String address, GeocodeCallback callback) {
         HttpUrl.Builder urlBuilder = HttpUrl.parse("https://apis.openapi.sk.com/tmap/geo/fullAddrGeo").newBuilder();
         urlBuilder.addQueryParameter("version", "1");
         urlBuilder.addQueryParameter("format", "json");
@@ -139,6 +162,7 @@ public class Search extends AppCompatActivity {
             @Override
             public void onFailure(Call call, IOException e) {
                 e.printStackTrace();
+                callback.onGeocodeFailure(e);
             }
 
             @Override
@@ -150,34 +174,41 @@ public class Search extends AppCompatActivity {
                         // 이곳에서 JSON 데이터를 처리
                         // 예: 위도와 경도 좌표 추출
                         System.out.println("GEOCODING");
-                        System.out.println("jsonResponse = " + jsonResponse);
+                        jsonResponse = jsonResponse.getJSONObject("coordinateInfo");
+                        JSONArray jsonArray = jsonResponse.getJSONArray("coordinate");
+                        jsonResponse = jsonArray.getJSONObject(0);
+//                        System.out.println("jsonArray = " + jsonArray.getJSONObject(0));
+                        double endlat = jsonResponse.getDouble("lat");
+                        double endlon = jsonResponse.getDouble("lon");
+//                        System.out.println("jsonResponse = " + jsonResponse);
+                        TMapPoint endPoint = new TMapPoint(endlat, endlon);
+                        System.out.println("TMapPoint = " + endPoint);
+                        callback.onGeocodeSuccess(endPoint);
                     } catch (Exception e) {
                         e.printStackTrace();
->>>>>>> Stashed changes
+                        callback.onGeocodeFailure(e);
                     }
                 }
             }
         });
-<<<<<<< Updated upstream
-=======
     }
 
     // Runnable을 초기화하는 메서드
-    private void initializeLocationUpdateRunnable() {
-        locationUpdateRunnable = new Runnable() {
-            @Override
-            public void run() {
-                initializeTMapView(); // 현재 위치 가져오기
-                handler.postDelayed(this, UPDATE_INTERVAL); // 다음 업데이트를 예약
-            }
-        };
-    }
+//    private void initializeLocationUpdateRunnable() {
+//        locationUpdateRunnable = new Runnable() {
+//            @Override
+//            public void run() {
+//                getCurrentLocation(); // 현재 위치 업데이트
+//                handler.postDelayed(this, UPDATE_INTERVAL); // 다음 업데이트 예약
+//            }
+//        };
+//        handler.post(locationUpdateRunnable); // Runnable 시작
+//    }
 
     protected void onDestroy() {
         super.onDestroy();
         // Handler에서 Runnable을 제거하여 메모리 누수 방지
         handler.removeCallbacks(locationUpdateRunnable);
->>>>>>> Stashed changes
     }
 
     private void fetchPathData(double startLat, double startLon, double endLat, double endLon) {
@@ -217,10 +248,42 @@ public class Search extends AppCompatActivity {
                         System.out.println("\n");
                         System.out.println("NAVIGATION");
                         // 이곳에서 JSON 데이터를 처리
-                        System.out.println("Received path data: " + jsonPathData.toString());
+//                        System.out.println("Received path data: " + jsonPathData);
 
+                        JSONArray jsonArray = jsonPathData.getJSONArray("features");
+                        System.out.println("jsonArray = " + jsonArray);
+//                        JSONArray jsonArray = jsonPathData.getJSONArray("description");
+                        jsonPathData = jsonArray.getJSONObject(0);
+                        jsonPathData = jsonPathData.getJSONObject("properties");
+//                        System.out.println("jsonPathData = " + jsonPathData);
+                        String naviSpeech = jsonPathData.getString("description");
+                        System.out.println("naviSpeech = " + naviSpeech);
+
+                        // 숫자 문자열 추출을 위한 새 코드
+                        Pattern pattern = Pattern.compile("\\d+");
+                        Matcher matcher = pattern.matcher(naviSpeech);
+                        StringBuilder numericStrings = new StringBuilder();
+                        if (matcher.find()) {
+                            // Extract the number and convert it to an integer
+                            int number = Integer.parseInt(matcher.group());
+
+                            // Perform the calculation
+                            int calculatedNumber = (int) Math.round(number * 100.0 / 74.0);
+
+                            // Replace the original number in the sentence with the calculated number
+                            String newSentence = naviSpeech.replaceAll("\\d+", String.valueOf(calculatedNumber));
+
+                            // Adjust the unit from 'meters' to 'steps'
+                            newSentence = newSentence.replace("m", " 걸음");
+                            tts.speak(newSentence, TextToSpeech.QUEUE_FLUSH, null);
+                        }
+                        System.out.println("숫자 문자열: " + numericStrings.toString().trim());
+
+//                        tts.speak(newSentence.toString(), TextToSpeech.QUEUE_FLUSH, null);
+
+//                        tts.speak(naviSpeech, TextToSpeech.QUEUE_FLUSH, null);
                         // 파일에 JSON 데이터를 저장
-                        saveJsonToFile(jsonPathData);
+//                        saveJsonToFile(jsonPathData);
 
                     } catch (Exception e) {
                         e.printStackTrace();
@@ -228,21 +291,11 @@ public class Search extends AppCompatActivity {
                 }
             }
         });
+//        initializeLocationUpdateRunnable(); // 위치 업데이트 Runnable 초기화 및 시작
     }
 
-    private void saveJsonToFile(JSONObject jsonPathData) {
-        String filename = "pathData.json";
-
-        try (FileOutputStream fos = openFileOutput(filename, Context.MODE_PRIVATE)) {
-            fos.write(jsonPathData.toString().getBytes());
-            System.out.println("JSON data has been saved to " + filename);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
 
     private void initializeTMapView() {
-
 //        public void initializeTMap (MainActivity mainActivity){
         // TmapView 생성 및 초기화
         tMapView = new TMapView(this); // Use 'this' instead of 'mainActivity'
@@ -250,9 +303,9 @@ public class Search extends AppCompatActivity {
         tMapData = new TMapData();
         Log.i("TMap", "초기화 성공");
         //현재위치 (파란점)
-        tMapView.setTrackingMode(true);
-        tMapView.setIconVisibility(true);
-        tMapView.setSightVisible(true);
+//        tMapView.setTrackingMode(true);
+//        tMapView.setIconVisibility(true);
+//        tMapView.setSightVisible(true);
         // API 키 인증 완료 콜백 등록
         tMapView.setOnApiKeyListener(new TMapView.OnApiKeyListenerCallback() {
             @Override
@@ -309,77 +362,106 @@ public class Search extends AppCompatActivity {
         }
     }
 
-    private void getCurrentLocation() {
-        LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-                && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            Location lastKnownLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-            System.out.println("lastKnownLocation = " + lastKnownLocation);
-
-            if (lastKnownLocation != null) {
-                double currentLatitude = lastKnownLocation.getLatitude();
-                double currentLongitude = lastKnownLocation.getLongitude();
-
-                String address = new String("가천대");
-                geocodeAddress(address);
-                // 경로 데이터 가져오기
-                fetchPathData(currentLatitude, currentLongitude, 37.4562, 127.1346);
-                // 경로 검색 예제
-                TMapPoint startPoint = new TMapPoint(currentLatitude, currentLongitude); // 현재 위치를 출발지로 사용
-                TMapPoint endPoint = new TMapPoint(37.4562, 127.1346);   // 도착지 좌표
-
-                tMapData.findPathDataWithType(
-                        TMapData.TMapPathType.PEDESTRIAN_PATH,  // 길찾기 타입 (CAR_PATH, PEDESTRIAN_PATH 등)
-                        startPoint,             // 출발지 좌표
-                        endPoint,               // 도착지 좌표
-                        new TMapData.FindPathDataListenerCallback() {
-                            @Override
-                            public void onFindPathData(TMapPolyLine path) {
-                                // 경로 검색 성공 시 호출되는 콜백
-                                String pathJson = String.valueOf(path.getLinePoint());
-                                if (pathJson != null) {
-                                    // pathJson을 사용하여 원하는 작업 수행
-                                    // 예: JSON 파싱 및 정보 추출
-//                                    System.out.println("pathJson = " + pathJson);
-                                }
-                                tMapView.addTMapPath(path);
-                                Log.d("TMap", "Search Success");
-                                Log.d("TMap", "path = " + path);
-                            }
-
-                            public void onFindPathDataFailed(int errorType, String errorMessage) {
-                                // 경로 검색 실패 시 호출되는 콜백
-                                Log.e("TMap", "Error: " + errorMessage);
-                            }
-                        }
-                );
-            } else {
-                // 현재 위치를 가져오지 못한 경우 위치 업데이트를 시도
-                Log.e("Location", "Failed to get current location Retry");
-                locationManager.requestSingleUpdate(LocationManager.GPS_PROVIDER, new LocationListener() {
-                    @Override
-                    public void onLocationChanged(Location location) {
-                        // 위치 업데이트 성공 시 실행되는 부분
-                        getCurrentLocation(); // 다시 현재 위치 가져오기 시도
-                    }
-
-                    @Override
-                    public void onStatusChanged(String provider, int status, Bundle extras) {}
-
-                    @Override
-                    public void onProviderEnabled(String provider) {}
-
-                    @Override
-                    public void onProviderDisabled(String provider) {}
-                }, null);
+    private void updateLocationData(double latitude, double longitude) {
+        String address = "가천대"; // 이 주소는 필요에 따라 변경 가능
+        geocodeAddress(address, new GeocodeCallback() {
+            @Override
+            public void onGeocodeSuccess(TMapPoint endPoint) {
+                endPoint_g = new TMapPoint(endPoint.getLatitude(), endPoint.getLongitude());
+                fetchPathData(latitude, longitude, endPoint.getLatitude(), endPoint.getLongitude());
+                findPath(new TMapPoint(latitude, longitude), endPoint);
             }
+
+            @Override
+            public void onGeocodeFailure(Exception e) {
+                Log.e("Geocode", "Geocoding failed: " + e.getMessage());
+            }
+        });
+    }
+
+
+    private void getCurrentLocation() {
+        System.out.println("Search.getCurrentLocation");
+        LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+
+        LocationListener locationListener = new LocationListener() {
+            @Override
+            public void onLocationChanged(Location location) {
+                System.out.println("Search.onLocationChanged");
+                if (location != null) {
+                    double currentLatitude = location.getLatitude();
+                    double currentLongitude = location.getLongitude();
+                    System.out.println("currentLongitude = " + currentLongitude);
+                    System.out.println("currentLatitude = " + currentLatitude);
+                    System.out.println("Search.onLocationChanged");
+                    updateLocationData(currentLatitude, currentLongitude);
+                    System.out.println("Search.onLocationChanged finished");
+//                    String address = "가천대";
+//                    geocodeAddress(address, new GeocodeCallback() {
+//                        @Override
+//                        public void onGeocodeSuccess(TMapPoint endPoint) {
+//                            endPoint_g = new TMapPoint(endPoint.getLatitude(), endPoint.getLongitude());
+//                            fetchPathData(currentLatitude, currentLongitude, endPoint.getLatitude(), endPoint.getLongitude());
+//                            findPath(new TMapPoint(currentLatitude, currentLongitude), endPoint);
+//                        }
+//
+//                        @Override
+//                        public void onGeocodeFailure(Exception e) {
+//                            System.out.println("Fail GEOCoding");
+//                        }
+//                    });
+                }
+                else {
+                    System.out.println("LOCATION FAILED!!");
+                }
+            }
+
+            @Override
+            public void onStatusChanged(String provider, int status, Bundle extras) {}
+
+            @Override
+            public void onProviderEnabled(String provider) {}
+
+            @Override
+            public void onProviderDisabled(String provider) {}
+        };
+
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+
+            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000, 5, locationListener);
+            locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 5000, 5, locationListener);
         } else {
             Log.e("Location", "Location permission not granted");
         }
+    }
 
+    private void findPath(TMapPoint startPoint, TMapPoint endPoint) {
+        tMapData.findPathDataWithType(
+                TMapData.TMapPathType.PEDESTRIAN_PATH,
+                startPoint,
+                endPoint,
+                new TMapData.FindPathDataListenerCallback() {
+                    @Override
+                    public void onFindPathData(TMapPolyLine path) {
+                        // 경로 검색 성공 시 호출되는 콜백
+                        String pathJson = String.valueOf(path.getLinePoint());
+                        if (pathJson != null) {
+                            // pathJson을 사용하여 원하는 작업 수행
+                            // 예: JSON 파싱 및 정보 추출
+//                                    System.out.println("pathJson = " + pathJson);
+                        }
+                        tMapView.addTMapPath(path);
+                        Log.d("TMap", "Search Success");
+//                                Log.d("TMap", "path = " + path);
+                    }
 
-        //경로 받아와서 tts 출력하기 ("" 자리에 문자열 넣어주시면 됩니다!)
-        tts.speak("", TextToSpeech.QUEUE_FLUSH, null);
+                    public void onFindPathDataFailed(int errorType, String errorMessage) {
+                        // 경로 검색 실패 시 호출되는 콜백
+                        Log.e("TMap", "Error: " + errorMessage);
+                    }
+                }
+        );
     }
 
 
